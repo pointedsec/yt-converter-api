@@ -1,0 +1,117 @@
+```mermaid
+graph TD
+    API[API Base: /api] --> Auth[Auth Routes]
+    API --> Users[Users Routes]
+    API --> Videos[Videos Routes]
+
+    %% Auth Routes
+    Auth --> Login[POST /auth/login]
+    Login --> LoginBody[Body: username, password]
+    Login --> LoginAuth[No Auth Required]
+
+    %% Users Routes
+    Users --> GetUsers[GET /users]
+    Users --> DeleteUser[DELETE /users/:user_id]
+    Users --> GetUser[GET /users/:user_id]
+    Users --> GetMe[GET /users/me]
+    Users --> GetUserVideos[GET /users/:user_id/videos]
+
+    GetUsers --> GetUsersAuth[Requires JWT + Admin]
+    DeleteUser --> DeleteUserAuth[Requires JWT + Admin]
+    GetUser --> GetUserAuth[Requires JWT + Admin]
+    GetMe --> GetMeAuth[Requires JWT]
+    GetUserVideos --> GetUserVideosAuth[Requires JWT + Admin]
+
+    %% Videos Routes
+    Videos --> GetVideos[GET /videos]
+    Videos --> DeleteVideo[DELETE /videos/:video_id]
+    Videos --> AddVideo[POST /videos]
+    Videos --> GetVideo[GET /videos/:video_id]
+
+    GetVideos --> GetVideosAuth[Requires JWT + Admin]
+    DeleteVideo --> DeleteVideoAuth[Requires JWT + Admin]
+    AddVideo --> AddVideoAuth[Requires JWT]
+    GetVideo --> GetVideoAuth[Requires JWT]
+
+    AddVideo --> AddVideoBody[Body: url, format]
+```
+# Documentación de Rutas de la API
+
+## Estructura Base
+Todas las rutas comienzan con el prefijo `/api`
+
+## Autenticación
+- Todas las rutas excepto `/api/auth/login` requieren autenticación JWT
+- Los tokens JWT deben incluirse en el header de la petición como `Authorization: Bearer <token>`
+- Las rutas marcadas como "Admin" requieren que el usuario tenga el rol de administrador
+
+## Auth Routes
+
+### POST /api/auth/login
+- Autenticación: No requerida
+- Body:
+```json
+{
+  "username": "string",
+  "password": "string"
+}
+```
+- Respuesta: Token JWT
+
+## Users Routes
+
+### GET /api/users
+- Autenticación: JWT + Admin
+- Respuesta: Lista de usuarios
+
+### DELETE /api/users/:user_id
+- Autenticación: JWT + Admin
+- Parámetros URL: user_id
+- Query Params: forceDelete (opcional, boolean)
+- Respuesta: Mensaje de confirmación
+
+### GET /api/users/:user_id
+- Autenticación: JWT + Admin
+- Parámetros URL: user_id
+- Respuesta: Detalles del usuario
+
+### GET /api/users/me
+- Autenticación: JWT
+- Respuesta: Usuario actual y sus videos
+
+### GET /api/users/:user_id/videos
+- Autenticación: JWT + Admin
+- Parámetros URL: user_id
+- Respuesta: Videos del usuario
+
+## Videos Routes
+
+### GET /api/videos
+- Autenticación: JWT + Admin
+- Respuesta: Lista de todos los videos
+
+### DELETE /api/videos/:video_id
+- Autenticación: JWT + Admin
+- Parámetros URL: video_id
+- Respuesta: Mensaje de confirmación
+
+### POST /api/videos
+- Autenticación: JWT
+- Body:
+```json
+{
+  "url": "string (YouTube URL)",
+  "format": "string"
+}
+```
+- Respuesta: Detalles del video agregado
+
+### GET /api/videos/:video_id
+- Autenticación: JWT
+- Parámetros URL: video_id
+- Respuesta: Detalles del video y formatos disponibles
+
+## Notas Adicionales
+- Las respuestas de error incluyen un mensaje descriptivo en el campo "error"
+- Los formatos de video soportados son los que acepta youtube-dl
+- Las URLs deben ser válidas y corresponder a videos de YouTube 

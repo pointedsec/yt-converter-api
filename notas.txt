@@ -1,0 +1,23 @@
+1. Módulos principales
+
+    auth → Maneja autenticación con JWT y roles.
+    users → Gestión de usuarios (invitados y administradores).
+    videos → Manejo de descargas, almacenamiento y consultas de videos.
+
+2. Endpoints
+Autenticación (/auth)
+
+    POST /auth/login → Inicia sesión y devuelve un JWT. ok
+    POST /auth/register → Solo admin puede registrar nuevos usuarios. ok
+
+Usuarios (/users) (Solo admin)
+
+    GET /users → Lista todos los usuarios. ok
+    GET /users/me OK
+    DELETE /users/:id → Elimina un usuario. (Desactiva el usuario) ok
+
+Videos (/videos)
+
+    POST /videos → Recibe una URL de YouTube y elige entre MP3 o MP4. OK
+    GET /videos/:id/download → Descarga un video convertido.
+    GET /videos (Solo admin) → Lista todos los videos y qué usuario lo ha creado ok
