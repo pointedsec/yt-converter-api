@@ -11,12 +11,16 @@ graph TD
 
     %% Users Routes
     Users --> GetUsers[GET /users]
+    Users --> CreateUser[POST /users]
+    Users --> UpdateUser[PUT /users/:user_id]
     Users --> DeleteUser[DELETE /users/:user_id]
     Users --> GetUser[GET /users/:user_id]
     Users --> GetMe[GET /users/me]
     Users --> GetUserVideos[GET /users/:user_id/videos]
 
     GetUsers --> GetUsersAuth[Requires JWT + Admin]
+    CreateUser --> CreateUserAuth[Requires JWT + Admin]
+    UpdateUser --> UpdateUserAuth[Requires JWT + Admin]
     DeleteUser --> DeleteUserAuth[Requires JWT + Admin]
     GetUser --> GetUserAuth[Requires JWT + Admin]
     GetMe --> GetMeAuth[Requires JWT]
@@ -64,10 +68,34 @@ Todas las rutas comienzan con el prefijo `/api`
 - Autenticación: JWT + Admin
 - Respuesta: Lista de usuarios
 
+### POST /api/users
+- Autenticación: JWT + Admin
+- Body:
+```json
+{
+  "username": "string",
+  "password": "string",
+  "role": "string"
+}
+```
+- Respuesta: Detalles del usuario creado
+
+### PUT /api/users/:user_id
+- Autenticación: JWT + Admin
+- Parámetros URL: user_id
+- Body:
+```json
+{
+  "username": "string",
+  "password": "string",
+  "role": "string"
+}
+```
+- Respuesta: Detalles del usuario actualizado
+
 ### DELETE /api/users/:user_id
 - Autenticación: JWT + Admin
 - Parámetros URL: user_id
-- Query Params: forceDelete (opcional, boolean)
 - Respuesta: Mensaje de confirmación
 
 ### GET /api/users/:user_id
