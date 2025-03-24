@@ -94,3 +94,8 @@ func GetYoutubeVideoTitle(videoURL string) (string, error) {
 	// Si no se encuentra el video, devolver un error
 	return "", fmt.Errorf("No se pudo encontrar el video con ID %s", videoID)
 }
+
+// TODO: Obtener las resoluciones de un video haciendo uso de pyConverter/main.py
+func GetYoutubeVideoResolutions(videoID string) ([]string, error) {
+	return nil, nil
+}

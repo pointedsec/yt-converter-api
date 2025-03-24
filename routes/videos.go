@@ -137,6 +137,7 @@ func AddVideo(c *fiber.Ctx) error {
 		"converted": true,
 		"message":   "Video agregado correctamente",
 		"path":      video.Path,
+		"videoID":   pkg.GetYoutubeVideoID(video.VideoID),
 	})
 }
 
@@ -177,4 +178,16 @@ func DeleteVideo(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "Video eliminado correctamente",
 	})
+}
+
+func GetVideoFormats(c *fiber.Ctx) error {
+	videoID := c.Params("video_id")
+	resolutions, err := pkg.GetYoutubeVideoResolutions(videoID)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":      "Error al obtener los videos",
+			"errorTrace": err.Error(),
+		})
+	}
+	return c.JSON(resolutions)
 }
