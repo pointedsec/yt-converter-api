@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"regexp"
+	"strings"
 	"yt-converter-api/config"
 )
 
@@ -95,7 +97,35 @@ func GetYoutubeVideoTitle(videoURL string) (string, error) {
 	return "", fmt.Errorf("No se pudo encontrar el video con ID %s", videoID)
 }
 
-// TODO: Obtener las resoluciones de un video haciendo uso de pyConverter/main.py
+// Obtener las resoluciones de un video haciendo uso de pyConverter/main.py
 func GetYoutubeVideoResolutions(videoID string) ([]string, error) {
-	return nil, nil
+	// Construir el comando para ejecutar el script de Python
+	cmd := exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "video", config.LoadConfig().StoragePath)
+
+	// Capturar la salida del comando
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("error al ejecutar el script de Python, comprueba la dirección URL del video u otros factores: %v, output: %v", err, string(output))
+	}
+
+	// Dividir la salida en líneas y obtener la última línea
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("no se obtuvo salida del script de Python")
+	}
+	lastLine := lines[len(lines)-1]
+
+	// Limpiar la cadena de caracteres innecesarios
+	lastLine = strings.TrimPrefix(lastLine, "[")
+	lastLine = strings.TrimSuffix(lastLine, "]")
+	lastLine = strings.ReplaceAll(lastLine, "'", "")
+	lastLine = strings.ReplaceAll(lastLine, " ", "")
+
+	// Convertir la cadena en una lista de formatos
+	formatList := strings.Split(lastLine, ",")
+	if len(formatList) == 0 {
+		return nil, fmt.Errorf("no se encontraron formatos disponibles")
+	}
+
+	return formatList, nil
 }

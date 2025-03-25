@@ -32,6 +32,7 @@ func deleteTables() {
 	query := `
 	DROP TABLE IF EXISTS users;
 	DROP TABLE IF EXISTS videos;
+	DROP TABLE IF EXISTS video_status;
 	`
 	_, err := DB.Exec(query)
 	if err != nil {
@@ -53,14 +54,24 @@ func createTables() {
 		user_id INTEGER,
 		video_id TEXT NOT NULL,
 		title TEXT NOT NULL,
-		format TEXT CHECK(format IN ('mp3', 'mp4')) NOT NULL,
-		path TEXT NOT NULL,
 		requested_by_ip TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES users(id),
-		UNIQUE(video_id, format)
-	);`
+		UNIQUE(video_id)
+	);
+	CREATE TABLE IF NOT EXISTS video_status (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		video_id TEXT NOT NULL,
+		resolution TEXT NOT NULL,
+		path TEXT,
+		status TEXT CHECK(status IN ('processing', 'completed', 'failed')) NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(video_id) REFERENCES videos(video_id),
+		UNIQUE(video_id, resolution)
+	);
+	`
 
 	_, err := DB.Exec(query)
 	if err != nil {

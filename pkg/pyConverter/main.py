@@ -62,8 +62,9 @@ def convert_to_video(youtube_url: str, resolution: str, output_path: str) -> str
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
-            info = ydl.extract_info(youtube_url, download=True)
-            return os.path.join(output_path, f"{info['id']}-{resolution.replace('p', '')}.mp4")
+            info_dict = ydl.extract_info(youtube_url, download=True)
+            output_filename = ydl.prepare_filename(info_dict)
+            return output_filename
         except Exception as e:
             print(f"Error downloading video: {e}")
             return ""
@@ -80,7 +81,7 @@ def check_if_path_is_valid_and_absolute(path: str) -> bool:
 if __name__ == "__main__":
 
     if len(sys.argv) < 4:
-        print("Please provide a video ID and convert to format (audio/video)")
+        print("Please provide a video ID, convert to format (audio/video) and output path")
         exit(1)
 
     # Get Video ID from Parameter

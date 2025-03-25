@@ -14,6 +14,8 @@ type Config struct {
 	DefaultAdminUsername string
 	DefaultAdminPassword string
 	GoogleCloudApiKey    string
+	PyConverterPath      string
+	StoragePath          string
 }
 
 func LoadConfig() Config {
@@ -29,6 +31,8 @@ func LoadConfig() Config {
 		DefaultAdminUsername: getEnv("DEFAULT_ADMIN_USERNAME", "admin"),
 		DefaultAdminPassword: getEnv("DEFAULT_ADMIN_PASSWORD", "admin"),
 		GoogleCloudApiKey:    getEnv("GOOGLE_CLOUD_API_KEY", ""),
+		PyConverterPath:      getEnv("PYCONVERTER_PATH", "/home/andres/Desktop/Proyectos/yt-converter-api/pkg/pyConverter/main.py"),
+		StoragePath:          getEnv("STORAGE_PATH", "/home/andres/Desktop/Proyectos/yt-converter-api/storage"),
 	}
 }
 

@@ -184,7 +184,7 @@ func GetUserVideos(c *fiber.Ctx) error {
 	var videos []models.Video
 	for rows.Next() {
 		var video models.Video
-		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.Format, &video.Path, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
+		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al obtener los videos del usuario",
@@ -241,7 +241,7 @@ func GetCurrentUser(c *fiber.Ctx) error {
 	var videos []models.Video
 	for rows.Next() {
 		var video models.Video
-		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.Format, &video.Path, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
+		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al obtener los videos del usuario",
@@ -272,7 +272,7 @@ func GetVideoByUser(c *fiber.Ctx) error {
 	var videos []models.Video
 	for rows.Next() {
 		var video models.Video
-		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.Format, &video.Path, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
+		err := rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{})
 		}
