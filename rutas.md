@@ -31,13 +31,22 @@ graph TD
     Videos --> DeleteVideo[DELETE /videos/:video_id]
     Videos --> AddVideo[POST /videos]
     Videos --> GetVideo[GET /videos/:video_id]
+    Videos --> GetFormats[GET /videos/:video_id/formats]
+    Videos --> ProcessVideo[POST /videos/:video_id/process]
+    Videos --> GetStatus[GET /videos/:video_id/status]
+    Videos --> DownloadVideo[GET /videos/:video_id/download]
 
     GetVideos --> GetVideosAuth[Requires JWT + Admin]
     DeleteVideo --> DeleteVideoAuth[Requires JWT + Admin]
     AddVideo --> AddVideoAuth[Requires JWT]
     GetVideo --> GetVideoAuth[Requires JWT]
+    GetFormats --> GetFormatsAuth[Requires JWT]
+    ProcessVideo --> ProcessVideoAuth[Requires JWT]
+    GetStatus --> GetStatusAuth[Requires JWT]
+    DownloadVideo --> DownloadVideoAuth[Requires JWT]
 
-    AddVideo --> AddVideoBody[Body: url, format]
+    AddVideo --> AddVideoBody[Body: url]
+    ProcessVideo --> ProcessVideoBody[Body: resolution]
 ```
 # Documentación de Rutas de la API
 
@@ -128,8 +137,7 @@ Todas las rutas comienzan con el prefijo `/api`
 - Body:
 ```json
 {
-  "url": "string (YouTube URL)",
-  "format": "string"
+  "url": "string (YouTube URL)"
 }
 ```
 - Respuesta: Detalles del video agregado
@@ -137,9 +145,38 @@ Todas las rutas comienzan con el prefijo `/api`
 ### GET /api/videos/:video_id
 - Autenticación: JWT
 - Parámetros URL: video_id
-- Respuesta: Detalles del video y formatos disponibles
+- Respuesta: Detalles del video
+
+### GET /api/videos/:video_id/formats
+- Autenticación: JWT
+- Parámetros URL: video_id
+- Respuesta: Lista de formatos/resoluciones disponibles para el video
+
+### POST /api/videos/:video_id/process
+- Autenticación: JWT
+- Parámetros URL: video_id
+- Body:
+```json
+{
+  "resolution": "string"
+}
+```
+- Respuesta: Mensaje de confirmación del inicio del procesamiento
+
+### GET /api/videos/:video_id/status
+- Autenticación: JWT
+- Parámetros URL: video_id
+- Respuesta: Estado actual del procesamiento del video
+
+### GET /api/videos/:video_id/download
+- Autenticación: JWT
+- Parámetros URL: video_id
+- Query Params: resolution
+- Respuesta: Archivo de video descargable
 
 ## Notas Adicionales
 - Las respuestas de error incluyen un mensaje descriptivo en el campo "error"
 - Los formatos de video soportados son los que acepta youtube-dl
-- Las URLs deben ser válidas y corresponder a videos de YouTube 
+- Las URLs deben ser válidas y corresponder a videos de YouTube
+- El procesamiento de videos es asíncrono
+- El estado de procesamiento puede ser: "processing", "completed" o "failed" 
