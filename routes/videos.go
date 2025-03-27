@@ -189,6 +189,25 @@ func DeleteVideo(c *fiber.Ctx) error {
 		processed_videos = append(processed_videos, status)
 	}
 
+	// Delete processed videos
+	_, err = tx.Exec("DELETE FROM video_status WHERE video_id = ?", videoID)
+	if err != nil {
+		tx.Rollback()
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":      "Error al eliminar el video",
+			"errorTrace": err.Error(),
+		})
+	}
+	// Delete video
+	_, err = tx.Exec("DELETE FROM videos WHERE video_id = ?", videoID)
+	if err != nil {
+		tx.Rollback()
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":      "Error al eliminar el video",
+			"errorTrace": err.Error(),
+		})
+	}
+
 	// Borrar videos procesados de este usuario
 	if len(processed_videos) != 0 {
 		for _, video := range processed_videos {
@@ -210,25 +229,6 @@ func DeleteVideo(c *fiber.Ctx) error {
 			}
 		}
 	}
-
-	// Delete processed videos
-	_, err = tx.Exec("DELETE FROM video_status WHERE video_id = ?", videoID)
-	if err != nil {
-		tx.Rollback()
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al eliminar el video",
-		})
-	}
-	// Delete videos from storage
-	// Delete video
-	_, err = db.DB.Exec("DELETE FROM videos WHERE video_id = ?", videoID)
-	if err != nil {
-		tx.Rollback()
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al eliminar el video",
-		})
-	}
-
 	tx.Commit()
 	return c.JSON(fiber.Map{
 		"message": "Video eliminado correctamente",
