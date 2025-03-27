@@ -40,7 +40,7 @@ func main() {
 	// Usuarios
 	videos.Post("/", routes.AddVideo)                       // Inserta un video
 	videos.Get("/:video_id", routes.GetVideo)               // Obtiene un video de la BBDD
-	videos.Get(":video_id/formats", routes.GetVideoFormats) // Obtiene los formatos disponibles de un video (streams)
+	videos.Get(":video_id/formats", routes.GetVideoFormats) // Obtiene los formatos disponibles de un video (resoluciones)
 	videos.Post(":video_id/process", routes.ProcessVideo)   // Procesa un video con el formato (resolución) indicado por POST, es decir, descarga el video y lo almacena en su correspondiente carpeta
 	videos.Get(":video_id/download", routes.DownloadVideo)  // Descarga un video
 	videos.Get(":video_id/status", routes.GetVideoStatus)   // Obtiene el estado de procesamiento de un video

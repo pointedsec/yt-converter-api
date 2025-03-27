@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"yt-converter-api/config"
@@ -90,20 +92,78 @@ func DeleteUser(c *fiber.Ctx) error {
 
 	forceDelete := c.Query("forceDelete") == "true"
 	message := "Usuario eliminado (desactivado) correctamente, si quiere eliminar el usuario, utiliza el parámetro 'forceDelete=true' en la URL, esto borrará el usuario y todos los videos convertidos de este usuario"
-	// TODO: Borrar videos del usuario (almacenamiento) y utilizar una transacción para este borrado
 	if forceDelete {
-		_, err := db.DB.Exec("DELETE FROM videos WHERE user_id = ?", id)
+		// Conseguir el path de todos los videos procesados de este usuario para borrarlos mas adelante
+		rows, err := db.DB.Query("SELECT s.id, s.video_id, s.resolution, s.path, s.status, s.created_at, s.updated_at FROM video_status s JOIN videos v ON v.video_id = s.video_id WHERE v.user_id = ?", id)
 		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Error al obtener las rutas de lo archivos de este usuario",
+			})
+		}
+		defer rows.Close()
+
+		var processed_videos []models.VideoStatus
+		for rows.Next() {
+			var processed_video models.VideoStatus
+			err := rows.Scan(&processed_video.ID, &processed_video.VideoID, &processed_video.Resolution, &processed_video.Path, &processed_video.Status, &processed_video.CreatedAt, &processed_video.UpdatedAt)
+			if err != nil {
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+					"error":      "Error al obtener los usuarios",
+					"errorTrace": err.Error(),
+				})
+			}
+			processed_videos = append(processed_videos, processed_video)
+		}
+		// Borrar videos procesados
+		tx, _ := db.DB.Begin()
+		_, err = tx.Exec(`
+    DELETE FROM video_status 
+    WHERE video_id IN (SELECT video_id FROM videos WHERE user_id = ?)`, id)
+
+		if err != nil {
+			tx.Rollback()
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Error al eliminar los videos procesados del usuario",
+			})
+		}
+		// Borrar videos
+		_, err = tx.Exec("DELETE FROM videos WHERE user_id = ?", id)
+		if err != nil {
+			tx.Rollback()
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al eliminar los videos del usuario",
 			})
 		}
-		_, err = db.DB.Exec("DELETE FROM users WHERE id = ?", id)
+		// Borrar Usuarios
+		_, err = tx.Exec("DELETE FROM users WHERE id = ?", id)
 		if err != nil {
+			tx.Rollback()
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al eliminar el usuario",
 			})
 		}
+		// Borrar videos procesados de este usuario
+		if len(processed_videos) != 0 {
+			for _, video := range processed_videos {
+				if _, err := os.Stat(video.Path); err == nil {
+					err := os.Remove(video.Path)
+					if err != nil {
+						tx.Rollback()
+						return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+							"error": "Uno de los videos convertidos de este usuario no se ha encontrado, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
+						})
+					} else {
+						fmt.Printf("✅ Borrado: %s\n", video.Path)
+					}
+				} else {
+					tx.Rollback()
+					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+						"error": "Uno de los videos convertidos de este usuario no se ha encontrado, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
+					})
+				}
+			}
+		}
+		tx.Commit()
 		message = "Usuario eliminado correctamente"
 	} else {
 		_, err := db.DB.Exec("UPDATE users SET active = false WHERE id = ?", id)
