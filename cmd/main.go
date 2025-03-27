@@ -52,7 +52,8 @@ func main() {
 	users := api.Group("/users")
 	users.Use(middleware.JWTProtected)
 	// ADMIN
-	users.Post("/", middleware.IsAdmin, routes.CreateUser)                   // Crea un usuario
+	users.Post("/", middleware.IsAdmin, routes.CreateUser) // Crea un usuario
+	// Crear una ruta para hacer una petición tipo POST a /test
 	users.Put("/:user_id", middleware.IsAdmin, routes.UpdateUser)            // Actualiza un usuario
 	users.Get("/", middleware.IsAdmin, routes.GetUsers)                      // Obtiene todos los usuarios
 	users.Delete("/:user_id", middleware.IsAdmin, routes.DeleteUser)         // Elimina un usuario
