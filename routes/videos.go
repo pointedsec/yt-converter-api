@@ -72,22 +72,6 @@ func AddVideo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Verificar si el video ya existe
-	var exists bool
-	err = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM videos WHERE video_id = ?)", request.URL).Scan(&exists)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al verificar si el video existe",
-		})
-	}
-
-	if exists {
-		return c.Status(http.StatusConflict).JSON(fiber.Map{
-			"converted": true,
-			"message":   "El video ya está agregado a la base de datos",
-		})
-	}
-
 	// Comprobar la validez de la URL
 	if !pkg.IsUrl(request.URL) {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
@@ -126,16 +110,23 @@ func AddVideo(c *fiber.Ctx) error {
 	}
 
 	// Comprobar si el video ya existe en la base de datos
+	var exists int
 	err = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM videos WHERE video_id = ?)", video.VideoID).Scan(&exists) // exists ya está definido en el bucle de la función AddVideo
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Error al verificar si el video existe",
 		})
 	}
-
-	if exists {
+	if exists == 1 {
+		_, err = db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", pkg.GetYoutubeVideoID(request.URL))
+		msg := ""
+		if err != nil {
+			msg = "Ademas ha ocurrido un error al intentar actualizar la fecha actual del video que se quería agregar"
+		}
 		return c.Status(http.StatusConflict).JSON(fiber.Map{
-			"error": "El video ya existe en la base de datos",
+			"error":     "El video ya existe en la base de datos",
+			"videoID":   video.VideoID,
+			"extraInfo": msg,
 		})
 	}
 
@@ -271,6 +262,10 @@ func ProcessVideo(c *fiber.Ctx) error {
 	go func() {
 		if _, err := ProcessYoutubeVideo(videoID, resolution); err != nil {
 			fmt.Printf("Error procesando video: %v\n", err)
+		}
+		_, err := db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", pkg.GetYoutubeVideoID(videoID))
+		if err != nil {
+			fmt.Printf("Error actualizando el video para la fecha de modificación")
 		}
 	}()
 
