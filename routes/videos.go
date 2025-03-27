@@ -168,13 +168,68 @@ func GetVideo(c *fiber.Ctx) error {
 // DeleteVideo Elimina un video de la base de datos
 func DeleteVideo(c *fiber.Ctx) error {
 	videoID := c.Params("video_id")
-	_, err := db.DB.Exec("DELETE FROM videos WHERE video_id = ?", videoID)
+	tx, _ := db.DB.Begin()
+	// Get all video_status for the video, there can be multiple
+	rows, err := tx.Query("SELECT * FROM video_status WHERE video_id = ?", videoID)
 	if err != nil {
+		tx.Rollback()
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Error al obtener los video_status",
+		})
+	}
+	defer rows.Close()
+
+	var processed_videos []models.VideoStatus
+	for rows.Next() {
+		var status models.VideoStatus
+		err = rows.Scan(&status.ID, &status.VideoID, &status.Resolution, &status.Path, &status.Status, &status.CreatedAt, &status.UpdatedAt)
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{})
+		}
+		processed_videos = append(processed_videos, status)
+	}
+
+	// Borrar videos procesados de este usuario
+	if len(processed_videos) != 0 {
+		for _, video := range processed_videos {
+			if _, err := os.Stat(video.Path); err == nil {
+				err := os.Remove(video.Path)
+				if err != nil {
+					tx.Rollback()
+					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+						"error": "Uno de los videos convertidos no se ha encontrado, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
+					})
+				} else {
+					fmt.Printf("✅ Borrado: %s\n", video.Path)
+				}
+			} else {
+				tx.Rollback()
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+					"error": "Uno de los videos convertidos de no se ha encontrado, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
+				})
+			}
+		}
+	}
+
+	// Delete processed videos
+	_, err = tx.Exec("DELETE FROM video_status WHERE video_id = ?", videoID)
+	if err != nil {
+		tx.Rollback()
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Error al eliminar el video",
+		})
+	}
+	// Delete videos from storage
+	// Delete video
+	_, err = db.DB.Exec("DELETE FROM videos WHERE video_id = ?", videoID)
+	if err != nil {
+		tx.Rollback()
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Error al eliminar el video",
 		})
 	}
 
+	tx.Commit()
 	return c.JSON(fiber.Map{
 		"message": "Video eliminado correctamente",
 	})
