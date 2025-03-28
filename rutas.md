@@ -6,7 +6,7 @@ graph TD
 
     %% Auth Routes
     Auth --> Login[POST /auth/login]
-    Login --> LoginBody[Body: username, password]
+    Login --> LoginBody[Body: Username, Password]
     Login --> LoginAuth[No Auth Required]
 
     %% Users Routes
@@ -46,7 +46,7 @@ graph TD
     DownloadVideo --> DownloadVideoAuth[Requires JWT]
 
     AddVideo --> AddVideoBody[Body: url]
-    ProcessVideo --> ProcessVideoBody[Body: resolution]
+    ProcessVideo --> ProcessVideoBody[Body: Resolution, IsAudio]
 ```
 # Documentación de Rutas de la API
 
@@ -160,7 +160,8 @@ Todas las rutas comienzan con el prefijo `/api`
 - Body:
 ```json
 {
-  "resolution": "string"
+  "Resolution": "string",
+  "IsAudio": false -> Para procesar un video en MP3, marcar en true
 }
 ```
 - Respuesta: Mensaje de confirmación del inicio del procesamiento
@@ -182,3 +183,4 @@ Todas las rutas comienzan con el prefijo `/api`
 - Las URLs deben ser válidas y corresponder a videos de YouTube
 - El procesamiento de videos es asíncrono
 - El estado de procesamiento puede ser: "processing", "completed" o "failed" 
+- Para procesar un video en MP3 establecer el parámetro `IsAudio` por POST a /api/videos/:video_id/process, si se quiere procesar el video en formato mp4 simplemente establecer el parámetro `Resolution` eligiendo la resolución deseada de `/api/videos/:video_id/formats`
