@@ -29,7 +29,7 @@ func IsUrl(str string) bool {
 // Función para comprobar si la URL de YouTube es válida y existe
 func IsYoutubeUrl(url string) (bool, error) {
 	// Validar que la URL es un enlace de YouTube
-	youtubeRegex := `^(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(watch\?v=|embed\/|v\/|e\/|.*[?&]v=)[A-Za-z0-9_-]{11}$`
+	youtubeRegex := `^(https?://)?(www\.)?(youtube\.com|youtu\.be)/(watch\?v=|embed/|v/|e/|shorts/|live/)?([A-Za-z0-9_-]{11})`
 	re := regexp.MustCompile(youtubeRegex)
 
 	// Si la URL no coincide con el patrón de YouTube, devolver false
@@ -40,7 +40,7 @@ func IsYoutubeUrl(url string) (bool, error) {
 	// Hacer una solicitud HTTP a la URL del video
 	resp, err := http.Get(url)
 	if err != nil {
-		return false, fmt.Errorf("Error al hacer la solicitud HTTP: %v", err)
+		return false, fmt.Errorf("error al hacer la solicitud HTTP: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -51,7 +51,7 @@ func IsYoutubeUrl(url string) (bool, error) {
 	}
 
 	// Si el código de estado no es 200, el video no existe o hay algún error
-	return false, fmt.Errorf("El video no existe o no está disponible, código de estado: %d", resp.StatusCode)
+	return false, fmt.Errorf("el video no existe o no está disponible, código de estado: %d", resp.StatusCode)
 }
 
 // Obtener el ID del video

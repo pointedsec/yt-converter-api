@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Tiempo de expiración del token (ejemplo: 24 horas)
+// Tiempo de expiración del token
 const TokenExpiration = time.Hour * 24
 
 func GenerateToken(id string, role string) (string, error) {
@@ -24,7 +24,7 @@ func GenerateToken(id string, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": id,
 		"role":    role,
-		"iat":     now.Unix(),            // Emitido en (Issued At)
+		"iat":     now.Unix(),            // Emitido en
 		"exp":     expirationTime.Unix(), // Expira en
 	})
 

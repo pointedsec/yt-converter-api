@@ -341,6 +341,9 @@ func ProcessYoutubeVideo(videoID string, resolution string) (string, error) {
 		return "", fmt.Errorf("la resolución %s no está disponible", resolution)
 	}
 
+	// Borrar el video procesado si ha tenido un estado fallido, esto lo hago a que videoID y resolution son campos que deben de ser únicos y no podría volver a procesar el video.
+	_, _ = db.DB.Exec("DELETE FROM video_status WHERE video_id = ? AND resolution = ? and status = ?", videoID, resolution, "failed")
+
 	// Insertar el video procesandose en la base de datos
 	_, err = db.DB.Exec("INSERT INTO video_status (video_id, resolution, status) VALUES (?, ?, ?)", videoID, resolution, "processing")
 	if err != nil {
@@ -353,7 +356,7 @@ func ProcessYoutubeVideo(videoID string, resolution string) (string, error) {
 	output, err := cmd.Output()
 	if err != nil {
 		// Actualizar el estado del video en la base de datos
-		_, updateErr := db.DB.Exec("UPDATE video_status SET status = ? WHERE video_id = ? AND resolution = ?", "failed", videoID, resolution)
+		_, updateErr := db.DB.Exec("UPDATE video_status SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "failed", videoID, resolution)
 		if updateErr != nil {
 			fmt.Printf("Error actualizando estado a failed: %v\n", updateErr)
 		}
@@ -367,8 +370,17 @@ func ProcessYoutubeVideo(videoID string, resolution string) (string, error) {
 	}
 	videoPath := outputLines[len(outputLines)-1]
 
+	// Comprobar si ha ocurrido un error, el string debería mostrar la cadena "Error" o "ERROR"
+	if strings.Contains(videoPath, "Error") || strings.Contains(videoPath, "ERROR") {
+		_, updateErr := db.DB.Exec("UPDATE video_status SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "failed", videoID, resolution)
+		if updateErr != nil {
+			fmt.Printf("Error actualizando estado a failed: %v\n", updateErr)
+		}
+		return "", fmt.Errorf("error procesando el video")
+	}
+
 	// Actualizar el estado del video y el path en la base de datos
-	_, err = db.DB.Exec("UPDATE video_status SET status = ?, path = ? WHERE video_id = ? AND resolution = ?", "completed", videoPath, videoID, resolution)
+	_, err = db.DB.Exec("UPDATE video_status SET status = ?, path = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "completed", videoPath, videoID, resolution)
 	if err != nil {
 		return "", fmt.Errorf("error al actualizar el estado del video: %v", err)
 	}
