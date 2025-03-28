@@ -111,7 +111,7 @@ func AddVideo(c *fiber.Ctx) error {
 
 	// Comprobar si el video ya existe en la base de datos
 	var exists int
-	err = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM videos WHERE video_id = ?)", video.VideoID).Scan(&exists) // exists ya está definido en el bucle de la función AddVideo
+	err = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM videos WHERE video_id = ?)", video.VideoID).Scan(&exists)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Error al verificar si el video existe",
@@ -272,9 +272,10 @@ func GetVideoFormats(c *fiber.Ctx) error {
 
 // Procesa un video de forma asíncrona obteniendo la resolución indicada por POST
 func ProcessVideo(c *fiber.Ctx) error {
-	// Obtiene el formato por POST (json)
+	// Obtiene el formato de procesamiento por POST (json)
 	type Request struct {
-		Resolution string `json:"resolution"`
+		Resolution string `json:"Resolution"`
+		IsAudio    bool   `json:"IsAudio"`
 	}
 
 	var request Request
@@ -285,6 +286,7 @@ func ProcessVideo(c *fiber.Ctx) error {
 	}
 
 	resolution := request.Resolution
+	isAudio := request.IsAudio
 
 	// Obtiene el video_id por GET
 	videoID := c.Params("video_id")
@@ -313,9 +315,9 @@ func ProcessVideo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Procesar el video de forma asíncrona
+	// Procesar el video de forma asíncrona con gorotuines
 	go func() {
-		if _, err := ProcessYoutubeVideo(videoID, resolution); err != nil {
+		if _, err := ProcessYoutubeVideo(videoID, resolution, isAudio); err != nil {
 			fmt.Printf("Error procesando video: %v\n", err)
 		}
 		_, err := db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", videoID)
@@ -330,15 +332,30 @@ func ProcessVideo(c *fiber.Ctx) error {
 }
 
 // Procesa un video de Youtube de forma asíncrona
-func ProcessYoutubeVideo(videoID string, resolution string) (string, error) {
-	// Comprobar si la resolución está disponible
-	resolutions, err := pkg.GetYoutubeVideoResolutions(videoID)
-	if err != nil {
-		return "", fmt.Errorf("error al obtener las resoluciones del video: %v", err)
+func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool) (string, error) {
+	// Comprobar si la resolución está disponible solo si el video a procesar debe salir en formato de video
+	if !isAudio {
+		resolutions, err := pkg.GetYoutubeVideoResolutions(videoID)
+		if err != nil {
+			return "", fmt.Errorf("error al obtener las resoluciones del video: %v", err)
+		}
+
+		if !slices.Contains(resolutions, resolution) {
+			return "", fmt.Errorf("la resolución %s no está disponible", resolution)
+		}
+	} else {
+		resolution = "mp3"
 	}
 
-	if !slices.Contains(resolutions, resolution) {
-		return "", fmt.Errorf("la resolución %s no está disponible", resolution)
+	// Comprobar si ya se ha procesado un video con esa resolución
+	var exists int
+	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM video_status WHERE video_id = ? AND resolution = ? and status = ?)", videoID, resolution, "completed").Scan(&exists)
+	if err != nil {
+		return "", fmt.Errorf("error al verificar si el video procesado ya existe: %v", err)
+	}
+	if exists == 1 {
+		_, _ = db.DB.Exec("UPDATE video_status SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ? and resolution = ? and status = ?", videoID, resolution, "completed")
+		return "", fmt.Errorf("el video con id %v y resolucion %v ya está procesado", videoID, resolution)
 	}
 
 	// Borrar el video procesado si ha tenido un estado fallido, esto lo hago a que videoID y resolution son campos que deben de ser únicos y no podría volver a procesar el video.
@@ -350,8 +367,15 @@ func ProcessYoutubeVideo(videoID string, resolution string) (string, error) {
 		return "", fmt.Errorf("error al insertar el estado del video: %v", err)
 	}
 
-	// Ejecutar el comando para descargar el video haciendo uso de pyConverter/main.py
-	cmd := exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "video", config.LoadConfig().StoragePath, resolution)
+	var cmd *exec.Cmd
+
+	if isAudio {
+		// Ejecutar el comando para descargar el AUDIO haciendo uso de pyConverter/main.py
+		cmd = exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "audio", config.LoadConfig().StoragePath)
+	} else {
+		// Ejecutar el comando para descargar el VIDEO haciendo uso de pyConverter/main.py
+		cmd = exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "video", config.LoadConfig().StoragePath, resolution)
+	}
 
 	output, err := cmd.Output()
 	if err != nil {
