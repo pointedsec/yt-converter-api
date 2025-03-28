@@ -80,3 +80,9 @@ func Login(c *fiber.Ctx) error {
 	}
 	return c.JSON(authResponse{Token: token})
 }
+
+func Logout(c *fiber.Ctx) error {
+	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		"error": "Error al generar el token",
+	})
+}

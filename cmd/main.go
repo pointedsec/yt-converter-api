@@ -32,7 +32,8 @@ func main() {
 	|                                                                   |
 	------------------------------------------------------------------- */
 	videos := api.Group("/videos")
-	videos.Use(middleware.JWTProtected)
+	videos.Use(middleware.JWTProtected())
+	videos.Use(middleware.ValidUserAndActive)
 
 	// ADMIN
 	videos.Get("/", middleware.IsAdmin, routes.GetVideos)               // Obtiene todos los videos
@@ -50,17 +51,18 @@ func main() {
 	|                                                                   |
 	------------------------------------------------------------------- */
 	users := api.Group("/users")
-	users.Use(middleware.JWTProtected)
+	users.Use(middleware.JWTProtected())
+	users.Use(middleware.ValidUserAndActive)
+
+	// Usuarios
+	users.Get("/me", routes.GetCurrentUser) // Obtiene el usuario autenticado y sus videos convertidos
 	// ADMIN
-	users.Post("/", middleware.IsAdmin, routes.CreateUser) // Crea un usuario
-	// Crear una ruta para hacer una petición tipo POST a /test
+	users.Post("/", middleware.IsAdmin, routes.CreateUser)                   // Crea un usuario
 	users.Put("/:user_id", middleware.IsAdmin, routes.UpdateUser)            // Actualiza un usuario
 	users.Get("/", middleware.IsAdmin, routes.GetUsers)                      // Obtiene todos los usuarios
 	users.Delete("/:user_id", middleware.IsAdmin, routes.DeleteUser)         // Elimina un usuario
 	users.Get("/:user_id", middleware.IsAdmin, routes.GetUser)               // Obtiene un usuario
 	users.Get("/:user_id/videos", middleware.IsAdmin, routes.GetVideoByUser) // Obtiene los videos de un usuario
-	// Usuarios
-	users.Get("/me", routes.GetCurrentUser) // Obtiene el usuario autenticado y sus videos convertidos
 
 	/* -----------------------------------------------------------------
 	|                                                                   |
@@ -69,6 +71,7 @@ func main() {
 	------------------------------------------------------------------- */
 	auth := api.Group("/auth")
 	auth.Post("/login", routes.Login)
+	auth.Get("/logout", routes.Logout)
 
 	port := cfg.Port
 	log.Printf("Server is running on port %s", port)
