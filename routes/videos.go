@@ -216,7 +216,7 @@ func DeleteVideo(c *fiber.Ctx) error {
 				if err != nil {
 					tx.Rollback()
 					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-						"error": "Uno de los videos convertidos no se ha encontrado, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
+						"error": "Uno de los videos convertidos no se ha podido borrar, comprobar manualmente las rutas en la base de datos y si el archivo realmente existe",
 					})
 				} else {
 					fmt.Printf("✅ Borrado: %s\n", video.Path)
@@ -270,7 +270,7 @@ func GetVideoFormats(c *fiber.Ctx) error {
 	return c.JSON(resolutions)
 }
 
-// Procesa un video de forma asíncrona para obtener el formato indicado por POST
+// Procesa un video de forma asíncrona obteniendo la resolución indicada por POST
 func ProcessVideo(c *fiber.Ctx) error {
 	// Obtiene el formato por POST (json)
 	type Request struct {
@@ -318,7 +318,7 @@ func ProcessVideo(c *fiber.Ctx) error {
 		if _, err := ProcessYoutubeVideo(videoID, resolution); err != nil {
 			fmt.Printf("Error procesando video: %v\n", err)
 		}
-		_, err := db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", pkg.GetYoutubeVideoID(videoID))
+		_, err := db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", videoID)
 		if err != nil {
 			fmt.Printf("Error actualizando el video para la fecha de modificación")
 		}

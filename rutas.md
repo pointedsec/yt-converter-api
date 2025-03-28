@@ -105,6 +105,8 @@ Todas las rutas comienzan con el prefijo `/api`
 ### DELETE /api/users/:user_id
 - Autenticación: JWT + Admin
 - Parámetros URL: user_id
+- Nota: Solo desactiva el usuario
+- Parámetro Opcional: forceDelete=true -> Borra videos, videos procesados y videos almacenados de este usuario
 - Respuesta: Mensaje de confirmación
 
 ### GET /api/users/:user_id
