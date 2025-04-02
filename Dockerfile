@@ -40,8 +40,10 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/pkg/pyConverter /app/pkg/pyConverter
 
 # Copiar el script de entrypoint y dar permisos de ejecución
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh /app/main
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && ls -l /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh
+RUN chmod +x /app/main
 
 # Exponer el puerto de la aplicación
 EXPOSE 3000
