@@ -85,7 +85,7 @@ Todas las rutas comienzan con el prefijo `/api`
   "username": "string",
   "password": "string",
   "role": "string",
-  "active": boolean
+  "active": "boolean"
 }
 ```
 - Respuesta: Detalles del usuario creado
