@@ -78,6 +78,8 @@ func Login(c *fiber.Ctx) error {
 			"errorTrace": err.Error(),
 		})
 	}
+	// Actualizar el campo last_login_at del usuario
+	_, _ = db.DB.Exec("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?", user.ID)
 	return c.JSON(authResponse{Token: token})
 }
 

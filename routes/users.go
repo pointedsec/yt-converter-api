@@ -48,7 +48,7 @@ func GetUsers(c *fiber.Ctx) error {
 	var users []models.User
 	for rows.Next() {
 		var user models.User
-		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active)
+		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at, &user.Last_login_at)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al obtener los usuarios",
@@ -66,7 +66,7 @@ func checkIfUserIsDeletable(id string) (bool, error) {
 	adminUsername := config.LoadConfig().DefaultAdminUsername
 	dbUser := db.DB.QueryRow("SELECT * FROM users WHERE id = ?", id)
 	var user models.User
-	err := dbUser.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active)
+	err := dbUser.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at)
 	if err != nil {
 		return false, err
 	}
@@ -166,7 +166,7 @@ func DeleteUser(c *fiber.Ctx) error {
 		tx.Commit()
 		message = "Usuario eliminado correctamente"
 	} else {
-		_, err := db.DB.Exec("UPDATE users SET active = false WHERE id = ?", id)
+		_, err := db.DB.Exec("UPDATE users SET active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?", id)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al eliminar el usuario",
@@ -193,7 +193,7 @@ func GetUser(c *fiber.Ctx) error {
 
 	var user models.User
 	for rows.Next() {
-		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active)
+		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at, &user.Last_login_at)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al obtener el usuario",
@@ -282,7 +282,7 @@ func GetCurrentUser(c *fiber.Ctx) error {
 
 	var user models.User
 	for rows.Next() {
-		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active)
+		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at, &user.Last_login_at)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error al obtener el usuario",
@@ -417,7 +417,7 @@ func UpdateUser(c *fiber.Ctx) error {
 	// Hashear contraseña y agregarlo a la base de datos
 	user.Password = pkg.GeneratePassword(user.Password)
 
-	_, err = db.DB.Exec("UPDATE users SET username = ?, password = ?, role = ?, active = ? WHERE id = ?", user.Username, user.Password, user.Role, user.Active, userID)
+	_, err = db.DB.Exec("UPDATE users SET username = ?, password = ?, role = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", user.Username, user.Password, user.Role, user.Active, userID)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error":      "Error al actualizar el usuario",
