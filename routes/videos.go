@@ -123,7 +123,7 @@ func AddVideo(c *fiber.Ctx) error {
 		if err != nil {
 			msg = "Ademas ha ocurrido un error al intentar actualizar la fecha actual del video que se quería agregar"
 		}
-		return c.Status(http.StatusConflict).JSON(fiber.Map{
+		return c.JSON(fiber.Map{
 			"error":     "El video ya existe en la base de datos",
 			"videoID":   video.VideoID,
 			"extraInfo": msg,
