@@ -66,7 +66,7 @@ func checkIfUserIsDeletable(id string) (bool, error) {
 	adminUsername := config.LoadConfig().DefaultAdminUsername
 	dbUser := db.DB.QueryRow("SELECT * FROM users WHERE id = ?", id)
 	var user models.User
-	err := dbUser.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at)
+	err := dbUser.Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.Active, &user.Created_at, &user.Updated_at, &user.Last_login_at)
 	if err != nil {
 		return false, err
 	}
