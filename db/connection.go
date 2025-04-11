@@ -22,10 +22,8 @@ func InitDB() {
 		deleteTables()
 	}
 	createTables()
-	if !config.LoadConfig().Production {
-		log.Println("Creando administrador por defecto, credenciales: ", config.LoadConfig().DefaultAdminUsername, config.LoadConfig().DefaultAdminPassword)
-		createDefaultAdmin()
-	}
+	log.Println("Creando administrador por defecto, credenciales: ", config.LoadConfig().DefaultAdminUsername, config.LoadConfig().DefaultAdminPassword)
+	createDefaultAdmin()
 }
 
 func deleteTables() {
