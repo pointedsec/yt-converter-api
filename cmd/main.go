@@ -31,6 +31,9 @@ func main() {
 
 	api := app.Group("/api")
 
+	// Status
+	api.Get("/status", routes.GetStatus)
+
 	// Rutas
 	/* -----------------------------------------------------------------
 	|                                                                   |
