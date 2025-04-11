@@ -85,6 +85,6 @@ func createDefaultAdmin() {
 	INSERT INTO users (username, password, role) VALUES (?, ?, ?)`
 	_, err := DB.Exec(query, config.LoadConfig().DefaultAdminUsername, pkg.GeneratePassword(config.LoadConfig().DefaultAdminPassword), "admin")
 	if err != nil {
-		log.Fatal("Error creando administrador por defecto:", err)
+		log.Println("Error creando administrador por defecto:", err)
 	}
 }
