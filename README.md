@@ -185,3 +185,6 @@ Todas las rutas comienzan con el prefijo `/api`
 - El procesamiento de videos es asíncrono
 - El estado de procesamiento puede ser: "processing", "completed" o "failed" 
 - Para procesar un video en MP3 establecer el parámetro `IsAudio` por POST a /api/videos/:video_id/process, si se quiere procesar el video en formato mp4 simplemente establecer el parámetro `Resolution` eligiendo la resolución deseada de `/api/videos/:video_id/formats`
+
+# License
+This project is licensed under the MIT License - see the LICENSE file for details.
