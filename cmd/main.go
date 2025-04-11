@@ -20,13 +20,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Iniciar la aplicación y la BBDD
+	// Iniciar la aplicación y configurar CORS
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
         AllowHeaders:     "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Authorization",
         AllowOrigins:     "*",
         AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
     }))
+
+	// Iniciar la base de datos
 	db.InitDB()
 
 	api := app.Group("/api")
