@@ -23,10 +23,10 @@ func main() {
 	// Iniciar la aplicación y configurar CORS
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-        AllowHeaders:     "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Authorization",
-        AllowOrigins:     "*",
-        AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-    }))
+		AllowHeaders: "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Authorization",
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+	}))
 
 	// Iniciar la base de datos
 	db.InitDB()
@@ -56,6 +56,7 @@ func main() {
 	videos.Post(":video_id/process", routes.ProcessVideo)   // Procesa un video con el formato (resolución) indicado por POST, es decir, descarga el video y lo almacena en su correspondiente carpeta
 	videos.Get(":video_id/download", routes.DownloadVideo)  // Descarga un video
 	videos.Get(":video_id/status", routes.GetVideoStatus)   // Obtiene el estado de procesamiento de un video
+
 	/* -----------------------------------------------------------------
 	|                                                                   |
 	|                             USERS                                |
@@ -74,6 +75,20 @@ func main() {
 	users.Delete("/:user_id", middleware.IsAdmin, routes.DeleteUser)         // Elimina un usuario
 	users.Get("/:user_id", middleware.IsAdmin, routes.GetUser)               // Obtiene un usuario
 	users.Get("/:user_id/videos", middleware.IsAdmin, routes.GetVideoByUser) // Obtiene los videos de un usuario
+
+	/* -----------------------------------------------------------------
+	|                                                                   |
+	|                             COOKIES                               |
+	|                                                                   |
+	------------------------------------------------------------------- */
+	cookies := api.Group("/cookies")
+	cookies.Use(middleware.JWTProtected())
+	cookies.Use(middleware.ValidUserAndActive)
+
+	// ADMIN
+	cookies.Post("/", middleware.IsAdmin, routes.UploadCookies)       // Subir un archivo cookies.txt para usarlo con yt-dlp
+	cookies.Get("/", middleware.IsAdmin, routes.GetCookiesInfo)       // Comprobar si existe ya un archivo cookies.txt
+	cookies.Delete("/", middleware.IsAdmin, routes.DeleteCookiesFile) // Borrar el archivo de cookies si ya existe
 
 	/* -----------------------------------------------------------------
 	|                                                                   |
