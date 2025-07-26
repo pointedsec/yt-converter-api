@@ -373,8 +373,29 @@ func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool) (strin
 		// Ejecutar el comando para descargar el AUDIO haciendo uso de pyConverter/main.py
 		cmd = exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "audio", config.LoadConfig().StoragePath)
 	} else {
+		args := []string{
+			config.LoadConfig().PyConverterPath,
+			videoID,
+			"video",
+			config.LoadConfig().StoragePath,
+			"--resolution",
+			resolution,
+		}
+
+		// 👉 Mostrar el comando completo como string
+		fmt.Println("Ejecutando comando:", "/usr/bin/python3", strings.Join(args, " "))
+
 		// Ejecutar el comando para descargar el VIDEO haciendo uso de pyConverter/main.py
-		cmd = exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "video", config.LoadConfig().StoragePath, resolution)
+		cmd = exec.Command(
+			"/usr/bin/python3",
+			config.LoadConfig().PyConverterPath,
+			videoID,
+			"video",
+			config.LoadConfig().StoragePath,
+			"--resolution",
+			resolution,
+		)
+
 	}
 
 	output, err := cmd.Output()
