@@ -78,7 +78,10 @@ def convert_to_audio(
         }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return output_path + f"/{youtube_id}.m4a"
+        # Esto es lo que hace la descarga real
+        url = f"https://www.youtube.com/watch?v={youtube_id}"
+        ydl.download([url])
+        return f"{output_path}/{youtube_id}.m4a"
 
 
 def get_video_available_resolutions(youtube_url: str, cookies_path: str = None) -> list[str]:
@@ -197,7 +200,7 @@ def main():
     elif args.convert_to == "video":
         if not args.resolution:
             resolutions = get_video_available_resolutions(video_url, args.cookies)
-            print("Resoluciones disponibles:", resolutions)
+            print(resolutions)
             sys.exit(0)
         path = convert_to_video(
             video_url, args.resolution, args.output_path, args.cookies
