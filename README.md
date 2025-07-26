@@ -47,6 +47,11 @@ graph TD
 
     AddVideo --> AddVideoBody[Body: url]
     ProcessVideo --> ProcessVideoBody[Body: Resolution, IsAudio]
+
+    %% Cookies Routes
+    Cookies --> GetCookiesInfo[GET /cookies]
+    Cookies --> DeleteCookiesFile[DELETE /cookies]
+    Cookies --> UploadCookies[POST /cookies]
 ```
 # Documentación de Rutas de la API
 
@@ -177,6 +182,22 @@ Todas las rutas comienzan con el prefijo `/api`
 - Parámetros URL: video_id
 - Query Params: resolution
 - Respuesta: Archivo de video descargable
+
+## Cookies Routes
+
+### GET /api/cookies
+- Autenticación: JWT + Admin
+- Respuesta: Información sobre si existe un archivo cookies.txt
+
+### DELETE /cookies
+- Autenticación: JWT + Admin
+- Respuesta: Borra el archivo cookies.txt si existe
+
+### POST /cookies
+- Autenticación: JWT
+- Body: www-form data -> Archivo cookies.txt llamado "cookies"
+```
+- Respuesta: Sube el archivo cookies.txt para usarlo con la librería de Python
 
 ## Notas Adicionales
 - Las respuestas de error incluyen un mensaje descriptivo en el campo "error"
