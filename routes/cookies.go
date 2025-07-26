@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"yt-converter-api/pkg"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,6 +11,7 @@ import (
 
 // Subir archivo de Cookies para usar con yt-dlp
 func UploadCookies(c *fiber.Ctx) error {
+	// Obtener el archivo del formulario
 	file, err := c.FormFile("cookies")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -16,9 +19,32 @@ func UploadCookies(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validar extensión .txt
+	if filepath.Ext(file.Filename) != ".txt" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "El archivo debe tener extensión .txt",
+		})
+	}
+
+	// Validar tamaño (mínimo 0.5 KB, máximo 50 KB)
+	const minSize int64 = 512       // 0.5 KB
+	const maxSize int64 = 1024 * 50 // 50 KB
+	if file.Size < minSize || file.Size > maxSize {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("El archivo debe pesar entre %d bytes y %d bytes", minSize, maxSize),
+		})
+	}
+
+	// Validar Content-Type (opcional, según navegador puede ser inconsistente)
+	header := file.Header.Get("Content-Type")
+	if header != "" && header != "text/plain" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "El archivo debe ser de tipo text/plain",
+		})
+	}
+
 	// Guardar el archivo en una ruta fija
 	savePath := "./pkg/pyConverter/cookies.txt"
-
 	err = c.SaveFile(file, savePath)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -27,7 +53,7 @@ func UploadCookies(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "Cookies actualizadas correctamente",
+		"message": "Cookies Uploaded Succesfully",
 	})
 }
 
