@@ -26,9 +26,9 @@ func UploadCookies(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validar tamaño (mínimo 0.5 KB, máximo 50 KB)
+	// Validar tamaño (mínimo 0.5 KB, máximo 2 MB)
 	const minSize int64 = 512       // 0.5 KB
-	const maxSize int64 = 1024 * 50 // 50 KB
+	const maxSize int64 = 1024 * 2048 // 2 MB
 	if file.Size < minSize || file.Size > maxSize {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": fmt.Sprintf("El archivo debe pesar entre %d bytes y %d bytes", minSize, maxSize),
