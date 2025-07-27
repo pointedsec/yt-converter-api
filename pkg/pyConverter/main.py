@@ -15,9 +15,12 @@ def get_cookie_file_path(cookies_path: str | None) -> str | None:
         print("Usando cookies %s" % cookies_path)
         return cookies_path
 
-    default_path = "./cookies.txt"
+    # Ruta absoluta al cookies.txt desde donde se encuentra este script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_path = os.path.join(script_dir, "cookies.txt")
+
     if os.path.exists(default_path):
-        print("Usando cookies %s" % cookies_path)
+        print("Usando cookies %s" % default_path)
         return default_path
 
     return None
@@ -29,14 +32,14 @@ def check_if_cookies_file_is_present(cookies_path: str | None) -> bool:
     Verifica si existe un archivo de cookies.
     Prioriza el path proporcionado por el usuario, luego el archivo por defecto.
     """
-    default_path = "./cookies.txt"
-
     if cookies_path and os.path.exists(cookies_path):
         return True
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_path = os.path.join(script_dir, "cookies.txt")
+
     return os.path.exists(default_path)
-
-
+    
 def convert_m4a_to_mp3(m4a_path: str, mp3_path: str) -> str:
     try:
         # Use ffmpeg to convert M4A to MP3
