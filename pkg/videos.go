@@ -98,9 +98,25 @@ func GetYoutubeVideoTitle(videoURL string) (string, error) {
 }
 
 // Obtener las resoluciones de un video haciendo uso de pyConverter/main.py
-func GetYoutubeVideoResolutions(videoID string) ([]string, error) {
-	// Construir el comando para ejecutar el script de Python
-	cmd := exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "video", config.LoadConfig().StoragePath)
+func GetYoutubeVideoResolutions(videoID string, cookiesPath string) ([]string, error) {
+	// Construir slice de argumentos base
+	args := []string{
+		config.LoadConfig().PyConverterPath,
+		videoID,
+		"video",
+		config.LoadConfig().StoragePath,
+	}
+
+	// Agregar --cookies si cookiesPath no está vacío
+	if cookiesPath != "" {
+		fmt.Println("Usando archivo de cookies en:", cookiesPath)
+		args = append(args, "--cookies", cookiesPath)
+	} else {
+		fmt.Println("No se está usando archivo de cookies")
+	}
+
+	// Construir el comando con /usr/bin/python3 y los argumentos
+	cmd := exec.Command("/usr/bin/python3", args...)
 
 	// Capturar la salida del comando
 	output, err := cmd.Output()

@@ -50,12 +50,13 @@ func main() {
 	videos.Get("/", middleware.IsAdmin, routes.GetVideos)               // Obtiene todos los videos
 	videos.Delete("/:video_id", middleware.IsAdmin, routes.DeleteVideo) // Elimina un video
 	// Usuarios
-	videos.Post("/", routes.AddVideo)                       // Inserta un video
-	videos.Get("/:video_id", routes.GetVideo)               // Obtiene un video de la BBDD
-	videos.Get(":video_id/formats", routes.GetVideoFormats) // Obtiene los formatos disponibles de un video (resoluciones)
-	videos.Post(":video_id/process", routes.ProcessVideo)   // Procesa un video con el formato (resolución) indicado por POST, es decir, descarga el video y lo almacena en su correspondiente carpeta
-	videos.Get(":video_id/download", routes.DownloadVideo)  // Descarga un video
-	videos.Get(":video_id/status", routes.GetVideoStatus)   // Obtiene el estado de procesamiento de un video
+	videos.Post("/", routes.AddVideo)                         // Inserta un video
+	videos.Get("/:video_id", routes.GetVideo)                 // Obtiene un video de la BBDD
+	videos.Get("/:video_id/formats", routes.GetVideoFormats)  // Obtiene los formatos disponibles de un video (resoluciones)
+	videos.Post("/:video_id/formats", routes.GetVideoFormats) // Obtiene los formatos disponibles de un video (resoluciones) Utilizando un archivo cookies
+	videos.Post("/:video_id/process", routes.ProcessVideo)    // Procesa un video con el formato (resolución) indicado por POST, es decir, descarga el video y lo almacena en su correspondiente carpeta
+	videos.Get("/:video_id/download", routes.DownloadVideo)   // Descarga un video
+	videos.Get("/:video_id/status", routes.GetVideoStatus)    // Obtiene el estado de procesamiento de un video
 
 	/* -----------------------------------------------------------------
 	|                                                                   |

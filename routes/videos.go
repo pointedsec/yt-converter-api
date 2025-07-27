@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -238,29 +239,63 @@ func DeleteVideo(c *fiber.Ctx) error {
 // Obtiene las resoluciones disponibles para un video
 func GetVideoFormats(c *fiber.Ctx) error {
 	videoID := c.Params("video_id")
-	rows, err := db.DB.Query("SELECT * FROM videos WHERE video_id = ?", videoID)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al obtener los videos",
-		})
-	}
-	defer rows.Close()
 
-	// Comprueba si el video ya está insertado en la base de datos
+	var cookiesPath string
+
+	// Comprobar si la petición es multipart/form-data antes de intentar leer archivo
+	contentType := c.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		fileHeader, err := c.FormFile("cookies")
+		if err != nil {
+			// Si el error indica que no hay archivo, continuar sin cookies
+			if strings.Contains(err.Error(), "no such file") || strings.Contains(err.Error(), "http: no such file") {
+				fileHeader = nil
+			} else {
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+					"error": "Error leyendo archivo cookies: " + err.Error(),
+				})
+			}
+		}
+
+		if fileHeader != nil {
+			tempFile, err := os.CreateTemp("", fmt.Sprintf("cookies_%s_*.txt", videoID))
+			if err != nil {
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+					"error": "No se pudo crear archivo temporal para cookies",
+				})
+			}
+			cookiesPath = tempFile.Name()
+			tempFile.Close()
+
+			err = c.SaveFile(fileHeader, cookiesPath)
+			if err != nil {
+				os.Remove(cookiesPath)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+					"error": "No se pudo guardar el archivo cookies.txt",
+				})
+			}
+			defer os.Remove(cookiesPath)
+		}
+	}
+
+	// Verificar existencia del video
+	row := db.DB.QueryRow("SELECT id, user_id, video_id, title, requested_by_ip, created_at, updated_at FROM videos WHERE video_id = ?", videoID)
+
 	var video models.Video
-	rows.Next()
-	err = rows.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
+	err := row.Scan(&video.ID, &video.UserID, &video.VideoID, &video.Title, &video.RequestedByIP, &video.CreatedAt, &video.UpdatedAt)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{})
-	}
-
-	if video.ID == 0 {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "Video no encontrado",
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Video no encontrado",
+			})
+		}
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Error al obtener el video",
 		})
 	}
 
-	resolutions, err := pkg.GetYoutubeVideoResolutions(video.VideoID)
+	// Obtener resoluciones pasando el path del archivo cookies si existe (vacío si no)
+	resolutions, err := pkg.GetYoutubeVideoResolutions(video.VideoID, cookiesPath)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -272,74 +307,73 @@ func GetVideoFormats(c *fiber.Ctx) error {
 
 // Procesa un video de forma asíncrona obteniendo la resolución indicada por POST
 func ProcessVideo(c *fiber.Ctx) error {
-	// Obtiene el formato de procesamiento por POST (json)
-	type Request struct {
-		Resolution string `json:"Resolution"`
-		IsAudio    bool   `json:"IsAudio"`
-	}
-
-	var request Request
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Error al analizar el cuerpo de la solicitud",
-		})
-	}
-
-	resolution := request.Resolution
-	isAudio := request.IsAudio
-
-	// Obtiene el video_id por GET
 	videoID := c.Params("video_id")
 
-	// Comprobar si el video ya existe en la base de datos
-	exists, err := db.DB.Query("SELECT COUNT(*) FROM videos WHERE video_id = ?", videoID)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al comprobar si el video existe en la base de datos",
-		})
-	}
-	defer exists.Close()
+	// Leer los campos de texto del formulario
+	resolution := c.FormValue("Resolution", "720p") // valor por defecto
+	isAudio := c.FormValue("IsAudio", "false") == "true"
 
+	// Obtener el archivo cookies.txt (si existe)
+	fileHeader, err := c.FormFile("cookies")
+	var cookiesPath string
+
+	if err == nil && fileHeader != nil {
+		// Crear archivo temporal para guardar las cookies
+		tempFile, err := os.CreateTemp("", fmt.Sprintf("cookies_%s_*.txt", videoID))
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": "No se pudo crear archivo temporal para cookies",
+			})
+		}
+		cookiesPath = tempFile.Name()
+		tempFile.Close() // cerramos el archivo temporal para que SaveFile pueda escribirlo
+
+		// Guardar el archivo cookies en el archivo temporal
+		err = c.SaveFile(fileHeader, cookiesPath)
+		if err != nil {
+			os.Remove(cookiesPath) // intentar limpiar
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": "No se pudo guardar el archivo cookies.txt",
+			})
+		}
+
+		// Limpiar archivo después de usarlo (en goroutine)
+		defer os.Remove(cookiesPath)
+	}
+
+	// Verificar existencia del video
+	row := db.DB.QueryRow("SELECT COUNT(*) FROM videos WHERE video_id = ?", videoID)
 	var count int
-	exists.Next()
-	err = exists.Scan(&count)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error al obtener el resultado de la consulta",
-		})
-	}
-
-	if count == 0 {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+	if err := row.Scan(&count); err != nil || count == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "El video no existe en la base de datos",
 		})
 	}
 
-	// Procesar el video de forma asíncrona con gorotuines
+	// Procesar el video en segundo plano
 	go func() {
-		if _, err := ProcessYoutubeVideo(videoID, resolution, isAudio); err != nil {
+		if _, err := ProcessYoutubeVideo(videoID, resolution, isAudio, cookiesPath); err != nil {
 			fmt.Printf("Error procesando video: %v\n", err)
 		}
 		_, err := db.DB.Exec("UPDATE videos SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ?", videoID)
 		if err != nil {
-			fmt.Printf("Error actualizando el video para la fecha de modificación")
+			fmt.Printf("Error actualizando el video: %v\n", err)
 		}
 	}()
 
 	return c.JSON(fiber.Map{
-		"message": "Video procesado, puedes consultar el estado en el endpoint GET /videos/:video_id/status",
+		"message": "Procesamiento iniciado",
 	})
 }
 
 // Procesa un video de Youtube de forma asíncrona
-func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool) (string, error) {
-	// Comprobar si la resolución está disponible solo si el video a procesar debe salir en formato de video
+func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool, cookiesPath string) (string, error) {
+	// Comprobar si la resolución está disponible solo si se va a descargar video
 	if !isAudio {
-		resolutions, err := pkg.GetYoutubeVideoResolutions(videoID)
+		resolutions, err := pkg.GetYoutubeVideoResolutions(videoID, cookiesPath)
 		if err != nil {
 			return "", fmt.Errorf("error al obtener las resoluciones del video: %v", err)
 		}
-
 		if !slices.Contains(resolutions, resolution) {
 			return "", fmt.Errorf("la resolución %s no está disponible", resolution)
 		}
@@ -347,75 +381,65 @@ func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool) (strin
 		resolution = "mp3"
 	}
 
-	// Comprobar si ya se ha procesado un video con esa resolución
+	// Comprobar si ya está procesado con esa resolución
 	var exists int
 	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM video_status WHERE video_id = ? AND resolution = ? and status = ?)", videoID, resolution, "completed").Scan(&exists)
 	if err != nil {
-		return "", fmt.Errorf("error al verificar si el video procesado ya existe: %v", err)
+		return "", fmt.Errorf("error al verificar si el video ya está procesado: %v", err)
 	}
 	if exists == 1 {
 		_, _ = db.DB.Exec("UPDATE video_status SET updated_at = CURRENT_TIMESTAMP WHERE video_id = ? and resolution = ? and status = ?", videoID, resolution, "completed")
-		return "", fmt.Errorf("el video con id %v y resolucion %v ya está procesado", videoID, resolution)
+		return "", fmt.Errorf("el video con id %v y resolución %v ya está procesado", videoID, resolution)
 	}
 
-	// Borrar el video procesado si ha tenido un estado fallido, esto lo hago a que videoID y resolution son campos que deben de ser únicos y no podría volver a procesar el video.
+	// Borrar estado fallido previo
 	_, _ = db.DB.Exec("DELETE FROM video_status WHERE video_id = ? AND resolution = ? and status = ?", videoID, resolution, "failed")
 
-	// Insertar el video procesandose en la base de datos
+	// Insertar nuevo estado: procesando
 	_, err = db.DB.Exec("INSERT INTO video_status (video_id, resolution, status) VALUES (?, ?, ?)", videoID, resolution, "processing")
 	if err != nil {
 		return "", fmt.Errorf("error al insertar el estado del video: %v", err)
 	}
 
-	var cmd *exec.Cmd
-
+	// Construir comando dinámico
+	args := []string{
+		config.LoadConfig().PyConverterPath,
+		videoID,
+	}
 	if isAudio {
-		// Ejecutar el comando para descargar el AUDIO haciendo uso de pyConverter/main.py
-		cmd = exec.Command("/usr/bin/python3", config.LoadConfig().PyConverterPath, videoID, "audio", config.LoadConfig().StoragePath)
+		args = append(args, "audio", config.LoadConfig().StoragePath)
 	} else {
-		args := []string{
-			config.LoadConfig().PyConverterPath,
-			videoID,
-			"video",
-			config.LoadConfig().StoragePath,
-			"--resolution",
-			resolution,
-		}
-
-		// 👉 Mostrar el comando completo como string
-		fmt.Println("Ejecutando comando:", "/usr/bin/python3", strings.Join(args, " "))
-
-		// Ejecutar el comando para descargar el VIDEO haciendo uso de pyConverter/main.py
-		cmd = exec.Command(
-			"/usr/bin/python3",
-			config.LoadConfig().PyConverterPath,
-			videoID,
-			"video",
-			config.LoadConfig().StoragePath,
-			"--resolution",
-			resolution,
-		)
-
+		args = append(args, "video", config.LoadConfig().StoragePath, "--resolution", resolution)
 	}
 
+	if cookiesPath != "" {
+		args = append(args, "--cookies", cookiesPath)
+		fmt.Println("Usando archivo de cookies en:", cookiesPath)
+	}
+
+	// Mostrar comando por consola
+	fmt.Println("Ejecutando comando:", "/usr/bin/python3", strings.Join(args, " "))
+
+	// Ejecutar comando
+	cmd := exec.Command("/usr/bin/python3", args...)
 	output, err := cmd.Output()
 	if err != nil {
-		// Actualizar el estado del video en la base de datos
+		// Fallo: marcar en base de datos
 		_, updateErr := db.DB.Exec("UPDATE video_status SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "failed", videoID, resolution)
 		if updateErr != nil {
 			fmt.Printf("Error actualizando estado a failed: %v\n", updateErr)
 		}
-		return "", fmt.Errorf("error al ejecutar el comando para descargar el video: %v, output: %v", err, string(output))
+		return "", fmt.Errorf("error al ejecutar el comando: %v, output: %v", err, string(output))
 	}
 
-	// Obtener la última línea del output (que contiene el path)
+	// Obtener la última línea del output
 	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(outputLines) == 0 {
 		return "", fmt.Errorf("no se obtuvo output del comando")
 	}
 	videoPath := outputLines[len(outputLines)-1]
 
-	// Comprobar si ha ocurrido un error, el string debería mostrar la cadena "Error" o "ERROR"
+	// Si contiene "Error" en el output, se marca como fallido
 	if strings.Contains(videoPath, "Error") || strings.Contains(videoPath, "ERROR") {
 		_, updateErr := db.DB.Exec("UPDATE video_status SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "failed", videoID, resolution)
 		if updateErr != nil {
@@ -424,7 +448,7 @@ func ProcessYoutubeVideo(videoID string, resolution string, isAudio bool) (strin
 		return "", fmt.Errorf("error procesando el video")
 	}
 
-	// Actualizar el estado del video y el path en la base de datos
+	// Guardar estado exitoso con la ruta del archivo
 	_, err = db.DB.Exec("UPDATE video_status SET status = ?, path = ?, updated_at = CURRENT_TIMESTAMP WHERE video_id = ? AND resolution = ?", "completed", videoPath, videoID, resolution)
 	if err != nil {
 		return "", fmt.Errorf("error al actualizar el estado del video: %v", err)
