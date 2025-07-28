@@ -336,9 +336,6 @@ func ProcessVideo(c *fiber.Ctx) error {
 				"error": "No se pudo guardar el archivo cookies.txt",
 			})
 		}
-
-		// Limpiar archivo después de usarlo (en goroutine)
-		defer os.Remove(cookiesPath)
 	}
 
 	// Verificar existencia del video
@@ -352,6 +349,8 @@ func ProcessVideo(c *fiber.Ctx) error {
 
 	// Procesar el video en segundo plano
 	go func() {
+		// Limpiar archivo después de usarlo
+		defer os.Remove(cookiesPath)
 		if _, err := ProcessYoutubeVideo(videoID, resolution, isAudio, cookiesPath); err != nil {
 			fmt.Printf("Error procesando video: %v\n", err)
 		}
