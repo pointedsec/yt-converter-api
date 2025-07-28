@@ -113,7 +113,7 @@ def get_video_available_resolutions(youtube_url: str, cookies_path: str = None) 
 
 
 def convert_to_video(youtube_url: str, resolution: str, output_path: str, cookies_path: str = None) -> str:
-    available_resolutions = get_video_available_resolutions(youtube_url)
+    available_resolutions = get_video_available_resolutions(youtube_url, cookies_path=cookies_path)
 
     if resolution not in available_resolutions:
         print(
